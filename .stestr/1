@@ -1,0 +1,7 @@
+time: 2019-07-05 23:22:05.485041Z
+tags: worker-0
+test: sparkler.tests.test_cmd.TestSparklerCmd.test_get_commit_activity
+time: 2019-07-05 23:22:05.486711Z
+successful: sparkler.tests.test_cmd.TestSparklerCmd.test_get_commit_activity [ multipart
+]
+tags: -worker-0
