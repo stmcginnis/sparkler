@@ -22,6 +22,8 @@ import requests
 import webcolors
 
 GITHUB_STATS_URL = 'https://api.github.com/repos/%s/stats/%s'
+GITHUB_ORG_REPOS_URL = 'https://api.github.com/orgs/%s/repos'
+GITHUB_USER_REPOS_URL = 'https://api.github.com/users/%s/repos'
 IMAGE_WIDTH = 800
 IMAGE_HEIGHT = 200
 
@@ -35,14 +37,36 @@ def get_version():
 def get_commit_activity(repo):
     """Gets the raw commit activity from GitHub
 
-    :param repo: The GitHub org/name to query.
+    :param repo: The GitHub org or org/name to query.
     :returns: JSON data per day by week for the last year.
     """
-    result = []
-    data = requests.get(GITHUB_STATS_URL % (repo, 'commit_activity'))
-    data = data.json()
-    for week in data:
-        result.append(week.get('total', 0))
+    result = [0 for i in range(52)]
+    repos = []
+    try:
+        if '/' in repo:
+            # We're getting a specific repo
+            repos = [repo]
+        else:
+            # We need to get the list of org's repos
+            r = requests.get(GITHUB_ORG_REPOS_URL % repo)
+            if r.status_code != 200:
+                # Must be a user and not an org
+                r = requests.get(GITHUB_USER_REPOS_URL % repo)
+                if r.status_code != 200:
+                    # Well, we tried
+                    return result
+            for rep in r.json():
+                if not rep['fork']:
+                    repos.append(rep['full_name'])
+
+        for rep in repos:
+            r = requests.get(GITHUB_STATS_URL % (rep, 'commit_activity'))
+            data = r.json()
+            for i in range(len(data)):
+                result[i] += data[i].get('total', 0)
+    except Exception as e:
+        print('Error getting repo stats: %s' % e)
+
     return result
 
 
@@ -76,7 +100,10 @@ def generate_image(bg, line, data):
     for point in data:
         # Calculate the position within the height accounting for the top and
         # bottom buffers.
-        percent_in_range = (point - low) / (high - low)
+        if high == low:
+            percent_in_range = .5
+        else:
+            percent_in_range = (point - low) / (high - low)
         y = ((IMAGE_HEIGHT - 20) * percent_in_range) + 10
         if last > 0:
             draw.line([pos, IMAGE_HEIGHT - last, pos + x_increment,
@@ -107,7 +134,9 @@ def main():
     )
     parser.add_argument(
         'repo',
-        help='The GitHub org/repo to report on.',
+        help='The GitHub org/repo to report on. ("org/repo" will get '
+             'stats for a specific repo, "org" will get the combined '
+             'stats for all of the orgs repos)',
     )
     parser.add_argument(
         'outfile',
