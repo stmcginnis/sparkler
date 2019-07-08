@@ -22,8 +22,8 @@ import requests
 import webcolors
 
 GITHUB_STATS_URL = 'https://api.github.com/repos/%s/stats/%s'
-IMAGE_WIDTH = 400
-IMAGE_HEIGHT = 100
+IMAGE_WIDTH = 800
+IMAGE_HEIGHT = 200
 
 
 def get_version():
@@ -122,6 +122,8 @@ def main():
     im = generate_image(bg_color, line_color, data)
 
     with open(args.outfile, 'w') as outfile:
+        # Scale down with antialiasing to smooth the image
+        im.thumbnail((400, 400), Image.ANTIALIAS)
         im.save(outfile)
 
 
