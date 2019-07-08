@@ -14,6 +14,7 @@
 #    limitations under the License.
 
 import argparse
+import os
 
 from pbr import version as pbr_version
 from PIL import Image
@@ -34,6 +35,21 @@ def get_version():
     return 'sparkler %s' % version_info.version_string()
 
 
+def _send_request(url):
+    """Sends an HTTP request and adds auth info if available.
+
+    Set the environment variables GH_USER and GH_TOKEN to use authentication
+    with API calls to help avoid unauthenticated rate limiting.
+    """
+    user = os.environ.get('GH_USER')
+    token = os.environ.get('GH_TOKEN')
+
+    if user and token:
+        return requests.get(url, auth=(user, token))
+
+    return requests.get(url)
+
+
 def get_commit_activity(repo):
     """Gets the raw commit activity from GitHub
 
@@ -48,10 +64,10 @@ def get_commit_activity(repo):
             repos = [repo]
         else:
             # We need to get the list of org's repos
-            r = requests.get(GITHUB_ORG_REPOS_URL % repo)
+            r = _send_request(GITHUB_ORG_REPOS_URL % repo)
             if r.status_code != 200:
                 # Must be a user and not an org
-                r = requests.get(GITHUB_USER_REPOS_URL % repo)
+                r = _send_request(GITHUB_USER_REPOS_URL % repo)
                 if r.status_code != 200:
                     # Well, we tried
                     return result
@@ -60,7 +76,7 @@ def get_commit_activity(repo):
                     repos.append(rep['full_name'])
 
         for rep in repos:
-            r = requests.get(GITHUB_STATS_URL % (rep, 'commit_activity'))
+            r = _send_request(GITHUB_STATS_URL % (rep, 'commit_activity'))
             data = r.json()
             for i in range(len(data)):
                 result[i] += data[i].get('total', 0)
