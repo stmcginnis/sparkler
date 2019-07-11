@@ -40,6 +40,7 @@ def get_commit_activity(repo):
     """
     result = []
     data = requests.get(GITHUB_STATS_URL % (repo, 'commit_activity'))
+    data.raise_for_status()
     data = data.json()
     for week in data:
         result.append(week.get('total', 0))
